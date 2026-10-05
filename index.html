@@ -13,8 +13,43 @@
     <h1>Test PWA</h1>
     <p>這是一個最小化 PWA，用來測試同一個 GitHub Pages 網域下能否安裝多個獨立 PWA。</p>
     <p id="status">正在準備離線功能…</p>
+    <button id="installBtn" hidden style="width:100%;margin-top:18px;padding:16px;border:0;border-radius:12px;background:#111827;color:#fff;font-size:20px;cursor:pointer">安裝 App</button>
+    <p id="installStatus" style="margin-top:12px;color:#666"></p>
   </main>
   <script>
+    let deferredPrompt = null;
+    const installBtn = document.getElementById('installBtn');
+    const installStatus = document.getElementById('installStatus');
+
+    window.addEventListener('beforeinstallprompt', (event) => {
+      event.preventDefault();
+      deferredPrompt = event;
+      installBtn.hidden = false;
+      installStatus.textContent = '已收到 Android 安裝事件，請按「安裝 App」測試。';
+    });
+
+    installBtn.addEventListener('click', async () => {
+      if (!deferredPrompt) {
+        installStatus.textContent = '目前沒有可用的安裝事件。';
+        return;
+      }
+      deferredPrompt.prompt();
+      const result = await deferredPrompt.userChoice;
+      installStatus.textContent = result.outcome === 'accepted' ? '已接受安裝。' : '已取消安裝。';
+      deferredPrompt = null;
+      installBtn.hidden = true;
+    });
+
+    window.addEventListener('appinstalled', () => {
+      installStatus.textContent = 'Test PWA 已安裝完成。';
+      installBtn.hidden = true;
+      deferredPrompt = null;
+    });
+
+    if (matchMedia('(display-mode: standalone)').matches || navigator.standalone === true) {
+      installStatus.textContent = '目前已以 App 模式開啟。';
+    }
+
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/test-pwa/service-worker.js')
         .then(() => navigator.serviceWorker.ready)
